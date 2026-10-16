@@ -22,8 +22,8 @@ The guide includes:
 
 ## View the guide
 
-Open the [published migration guide](https://msft-contoso-university.github.io/mulesoft-to-azure-guide/).
-GitHub Pages may redirect to the organization's configured custom domain.
+Open the [published migration guide](https://demo.gilbertappiah.com/mulesoft-to-azure-guide/).
+GitHub Pages serves the site under the organization's configured custom domain.
 
 You can also open [index.html](./index.html) directly in a browser. No build,
 installation, external JavaScript, or stylesheet dependency is required.
