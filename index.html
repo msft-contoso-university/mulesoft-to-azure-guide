@@ -1,0 +1,786 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A practical MuleSoft-to-Azure migration guide covering low-code services, backend APIs, capability mappings, costs, discovery, testing, and cutover.">
+  <title>MuleSoft to Microsoft | Integration Modernization Guide</title>
+  <script>
+    (() => {
+      const param = new URLSearchParams(window.location.search).get("scoutTheme");
+      const theme =
+        param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.setAttribute("data-theme", theme);
+    })();
+  </script>
+  <style>
+    :root {
+      color-scheme: light;
+      --cp-bg: #f7f4ef;
+      --cp-bg-elevated: #fcfbf8;
+      --cp-surface: #ffffff;
+      --cp-surface-soft: #f5f5f5;
+      --cp-border: #dedede;
+      --cp-border-strong: #919191;
+      --cp-text: #242424;
+      --cp-text-muted: #5c5c5c;
+      --cp-text-soft: #6f6f6f;
+      --cp-accent: #b11f4b;
+      --cp-accent-hover: #9a1a41;
+      --cp-accent-soft: rgba(177, 31, 75, 0.08);
+      --cp-accent-fg: #ffffff;
+      --cp-success: #16a34a;
+      --cp-danger: #dc2626;
+      --cp-warning: #f59e0b;
+      --cp-link: #0078d4;
+      --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+      --cp-overlay: rgba(255, 255, 255, 0.8);
+      --cp-panel: rgba(255, 255, 255, 0.86);
+      --cp-panel-strong: rgba(255, 255, 255, 0.96);
+      --cp-sheen: rgba(255, 255, 255, 0.55);
+      --cp-highlight: rgba(177, 31, 75, 0.12);
+    }
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --cp-bg: #3d3b3a;
+      --cp-bg-elevated: #343231;
+      --cp-surface: #292929;
+      --cp-surface-soft: #2e2e2e;
+      --cp-border: #474747;
+      --cp-border-strong: #5f5f5f;
+      --cp-text: #dedede;
+      --cp-text-muted: #919191;
+      --cp-text-soft: #b0b0b0;
+      --cp-accent: #fd8ea1;
+      --cp-accent-hover: #fb7b91;
+      --cp-accent-soft: rgba(253, 142, 161, 0.14);
+      --cp-accent-fg: #1a1a1a;
+      --cp-success: #4ade80;
+      --cp-danger: #f87171;
+      --cp-warning: #fbbf24;
+      --cp-link: #4da6ff;
+      --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+      --cp-overlay: rgba(41, 41, 41, 0.88);
+      --cp-panel: rgba(41, 41, 41, 0.72);
+      --cp-panel-strong: rgba(41, 41, 41, 0.96);
+      --cp-sheen: rgba(255, 255, 255, 0.04);
+      --cp-highlight: rgba(253, 142, 161, 0.12);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: var(--cp-bg); color: var(--cp-text); font: 16px/1.65 "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif; }
+    a { color: var(--cp-link); text-underline-offset: 3px; }
+    a:hover { text-decoration-thickness: 2px; }
+    button, input, select { font: inherit; }
+    button, select, input { border: 1px solid var(--cp-border-strong); border-radius: 0.625rem; background: var(--cp-surface); color: var(--cp-text); padding: 10px 14px; }
+    button { cursor: pointer; touch-action: manipulation; }
+    button:hover { border-color: var(--cp-accent); background: var(--cp-accent-soft); }
+    :focus-visible { outline: 3px solid var(--cp-accent); outline-offset: 4px; }
+    h1, h2, h3, h4 { line-height: 1.2; text-wrap: balance; }
+    h1 { font-size: clamp(2.4rem, 5.5vw, 4.4rem); letter-spacing: -0.045em; margin: 16px 0 24px; max-width: 1000px; }
+    h2 { font-size: clamp(1.9rem, 3vw, 2.6rem); letter-spacing: -0.03em; margin: 8px 0 16px; }
+    h3 { font-size: 1.25rem; margin: 0 0 12px; }
+    h4 { font-size: 1rem; margin: 24px 0 8px; }
+    p { margin: 0 0 16px; }
+    ul, ol { padding-left: 24px; }
+    li { margin-bottom: 8px; }
+    strong { color: var(--cp-text); }
+    small, .small { font-size: 0.82rem; }
+    code { font-family: Consolas, "Courier New", Courier, monospace; font-size: 0.9em; overflow-wrap: anywhere; }
+    [hidden] { display: none !important; }
+    section, [id] { scroll-margin-top: 120px; }
+    .wrap { max-width: 1280px; margin-inline: auto; padding-inline: 32px; }
+    .skip { position: fixed; top: -100px; left: 16px; z-index: 100; padding: 12px; background: var(--cp-surface); }
+    .skip:focus { top: 12px; }
+    .topbar { position: sticky; top: 0; z-index: 20; background: var(--cp-surface); border-bottom: 1px solid var(--cp-border); }
+    .nav { display: flex; gap: 16px; align-items: center; min-height: 72px; }
+    .brand { font-size: 1.05rem; font-weight: 750; white-space: nowrap; text-decoration: none; color: var(--cp-text); }
+    .brand span, .accent { color: var(--cp-accent); }
+    .navlinks { display: flex; gap: 4px; flex: 1; flex-wrap: wrap; }
+    .navlinks a { color: var(--cp-text); text-decoration: none; padding: 8px; font-size: 0.83rem; font-weight: 600; border-radius: 0.625rem; }
+    .navlinks a:hover { background: var(--cp-accent-soft); color: var(--cp-accent); }
+    .nav button { padding: 8px 12px; font-size: 0.82rem; }
+    .hero { padding: 72px 0 56px; background: var(--cp-bg-elevated); border-bottom: 1px solid var(--cp-border); }
+    .eyebrow { color: var(--cp-accent); text-transform: uppercase; letter-spacing: 0.14em; font-size: 0.74rem; font-weight: 750; }
+    .lead { font-size: 1.16rem; max-width: 900px; color: var(--cp-text-soft); }
+    .pills { display: flex; gap: 8px; flex-wrap: wrap; margin: 24px 0; }
+    .pill, .badge { display: inline-block; border: 1px solid var(--cp-border); background: var(--cp-surface); padding: 4px 12px; border-radius: 0.625rem; font-size: 0.77rem; font-weight: 650; }
+    .badge { background: var(--cp-accent-soft); border-color: var(--cp-accent); color: var(--cp-accent); white-space: nowrap; }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--cp-border); margin-top: 36px; padding-top: 24px; gap: 24px; }
+    .stat strong { display: block; font-size: 1.9rem; line-height: 1.3; }
+    .stat span { font-size: 0.78rem; color: var(--cp-text-soft); }
+    .section { padding: 64px 0; }
+    .alt { background: var(--cp-bg-elevated); border-block: 1px solid var(--cp-border); }
+    .section-intro { color: var(--cp-text-soft); max-width: 920px; margin-bottom: 28px; }
+    .grid2, .grid3, .grid4 { display: grid; gap: 20px; }
+    .grid2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .card { background: var(--cp-surface); border: 1px solid var(--cp-border); border-radius: 16px; padding: 24px; min-width: 0; }
+    .card p, .card li { color: var(--cp-text-soft); font-size: 0.94rem; }
+    .card .number { font-size: 0.78rem; color: var(--cp-accent); font-weight: 750; display: block; margin-bottom: 12px; }
+    .callout { border-left: 4px solid var(--cp-accent); background: var(--cp-accent-soft); padding: 20px 24px; border-radius: 0 0.625rem 0.625rem 0; margin: 24px 0; }
+    .callout p:last-child { margin: 0; }
+    .callout.warn { border-left-color: var(--cp-warning); background: var(--cp-surface); }
+    .toolbar { display: flex; gap: 16px; align-items: end; flex-wrap: wrap; margin: 24px 0 12px; }
+    .field { display: flex; flex-direction: column; gap: 6px; min-width: 180px; }
+    .field.grow { flex: 1; min-width: 240px; }
+    .cost-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-block: 24px; }
+    .cost-grid .field { min-width: 0; }
+    .cost-total { font-size: 1.8rem; font-variant-numeric: tabular-nums; }
+    .error { color: var(--cp-danger); font-weight: 650; }
+    label { font-size: 0.84rem; font-weight: 650; }
+    .tablewrap { overflow: auto; border: 1px solid var(--cp-border); border-radius: 16px; background: var(--cp-surface); }
+    table { border-collapse: collapse; width: 100%; font-size: 0.87rem; text-align: left; }
+    caption { text-align: left; padding: 16px; font-weight: 650; background: var(--cp-surface-soft); }
+    th, td { padding: 16px; vertical-align: top; border-bottom: 1px solid var(--cp-border); }
+    thead th { background: var(--cp-surface-soft); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    tbody th { font-weight: 650; min-width: 160px; }
+    td { color: var(--cp-text-soft); }
+    tr:last-child > * { border-bottom: 0; }
+    #mapping-table { min-width: 920px; }
+    #mapping-table th:nth-child(1) { width: 20%; }
+    #mapping-table th:nth-child(2) { width: 26%; }
+    #mapping-table th:nth-child(3) { width: 14%; }
+    #mapping-table th:nth-child(4) { width: 40%; }
+    .tablewrap:focus-visible { outline-offset: 2px; }
+    .ref { font-size: 0.76rem; font-weight: 700; white-space: nowrap; margin-left: 4px; }
+    .muted { color: var(--cp-text-soft); }
+    .controls { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; }
+    .controls button[aria-pressed="true"] { background: var(--cp-accent); color: var(--cp-accent-fg); border-color: var(--cp-accent); }
+    .deep-panel { border: 1px solid var(--cp-border); border-radius: 16px; background: var(--cp-surface); padding: 32px; }
+    .deep-panel .grid2 { gap: 40px; }
+    .deep-panel ul { margin-bottom: 0; }
+    .arch { background: var(--cp-surface); border: 1px solid var(--cp-border); border-radius: 16px; padding: 32px; }
+    .arch-row { display: grid; gap: 16px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .arch-node { border: 1px solid var(--cp-border-strong); border-radius: 0.625rem; text-align: center; padding: 16px; }
+    .arch-node strong, .arch-node span { display: block; }
+    .arch-node span { font-size: 0.81rem; color: var(--cp-text-soft); }
+    .arch-node.gateway { border: 2px solid var(--cp-accent); background: var(--cp-accent-soft); }
+    .arch-arrow { text-align: center; color: var(--cp-accent); font-size: 1.4rem; line-height: 1; padding: 12px; }
+    .arch-rail { margin-top: 24px; padding-top: 20px; border-top: 1px dashed var(--cp-border-strong); font-size: 0.86rem; color: var(--cp-text-soft); text-align: center; }
+    .flow { counter-reset: step; list-style: none; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+    .flow li { counter-increment: step; margin: 0; }
+    .flow li::before { content: "0" counter(step); display: block; color: var(--cp-accent); font-weight: 750; margin-bottom: 12px; }
+    .checklist label { display: flex; align-items: flex-start; gap: 12px; font-weight: 400; padding: 12px 0; border-bottom: 1px solid var(--cp-border); cursor: pointer; }
+    .checklist input { width: 20px; height: 20px; flex-shrink: 0; margin: 4px 0 0; accent-color: var(--cp-accent); }
+    details { background: var(--cp-surface); border: 1px solid var(--cp-border); border-radius: 0.625rem; padding: 16px 20px; margin-bottom: 12px; }
+    summary { cursor: pointer; font-weight: 650; }
+    details > p, details > ul { margin-top: 16px; }
+    .source-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 32px; padding-left: 28px; }
+    .source-list li { padding: 8px; font-size: 0.86rem; overflow-wrap: anywhere; }
+    .source-list a { font-weight: 600; }
+    .source-list span { display: block; color: var(--cp-text-soft); font-size: 0.8rem; }
+    footer { border-top: 1px solid var(--cp-border); padding: 32px 0; background: var(--cp-surface); color: var(--cp-text-soft); font-size: 0.82rem; }
+    .footer-row { display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+    @media (max-width: 1080px) {
+      .nav { flex-wrap: wrap; gap: 4px 16px; padding-block: 12px; }
+      .navlinks { order: 3; width: 100%; flex-basis: 100%; }
+      .nav button:first-of-type { margin-left: auto; }
+      .grid4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 700px) {
+      .wrap { padding-inline: 20px; }
+      .hero { padding-top: 40px; }
+      .section { padding-block: 44px; }
+      .grid2, .grid3, .grid4, .deep-panel .grid2, .flow, .source-list, .cost-grid { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      .navlinks { flex-wrap: nowrap; overflow-x: auto; }
+      .navlinks a { white-space: nowrap; padding: 8px; }
+      .nav { gap: 6px; }
+      .brand { font-size: 0.94rem; }
+      .nav button { font-size: 0.76rem; padding: 8px; }
+      .arch, .deep-panel { padding: 20px; }
+      .arch-row { grid-template-columns: 1fr; }
+      .field, .field.grow { min-width: 0; width: 100%; }
+      .toolbar { align-items: stretch; }
+      .controls button { flex-grow: 1; }
+    }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+    @media print {
+      :root, html[data-theme="dark"] { color-scheme: light; --cp-bg: #ffffff; --cp-bg-elevated: #ffffff; --cp-surface: #ffffff; --cp-surface-soft: #f5f5f5; --cp-text: #242424; --cp-text-soft: #5c5c5c; --cp-border: #dedede; --cp-accent: #b11f4b; --cp-accent-soft: rgba(177,31,75,0.08); --cp-link: #0078d4; }
+      .topbar, .no-print, .toolbar, .controls, .skip, #map-empty { display: none !important; }
+      .wrap { max-width: none; padding: 0; }
+      .hero, .section { padding: 24px 0; }
+      h1 { font-size: 34px; }
+      h2 { font-size: 26px; }
+      .deep-panel[hidden] { display: block !important; margin-top: 20px; }
+      #mapping-table tr[hidden] { display: table-row !important; }
+      .tablewrap { overflow: visible; border: 0; }
+      #mapping-table { min-width: 0; }
+      table { font-size: 9pt; }
+      td, th { padding: 8px; }
+      .card, .deep-panel, .arch-node { break-inside: avoid; }
+      .source-list { grid-template-columns: 1fr; }
+      .source-list a::after { content: " (" attr(href) ")"; font-weight: 400; font-size: 8pt; overflow-wrap: anywhere; }
+    }
+  </style>
+  <noscript><style>.deep-panel[hidden] { display: block !important; margin-top: 20px; } .no-print, .topbar button { display: none !important; }</style></noscript>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="topbar">
+    <nav class="wrap nav" aria-label="Main navigation">
+      <a class="brand" href="#overview">Integration<span>.Guide</span></a>
+      <div class="navlinks">
+        <a href="#mapping">Capability Map</a><a href="#low-code">Low-Code</a><a href="#services">Services</a><a href="#architecture">Architecture</a><a href="#backend-apis">Backend APIs</a><a href="#migration">Migration</a><a href="#cost">Costs</a><a href="#discovery">Readiness</a><a href="#sources">Sources</a>
+      </div>
+      <button type="button" id="theme-toggle" aria-label="Switch color theme">Theme</button>
+      <button type="button" id="print-guide">Print / PDF</button>
+    </nav>
+  </header>
+  <main id="main">
+    <section class="hero" id="overview">
+      <div class="wrap">
+        <div class="eyebrow">Migration Field Guide / APIs, Integrations, and Low-Code</div>
+        <h1>From MuleSoft to Microsoft.<br><span class="accent">Map the capabilities,</span><br>not just the gateway.</h1>
+        <p class="lead">Azure API Management is the front door. Logic Apps, messaging, custom services, and selected Power Platform tools replace different parts of the integration estate. Start with what each Mule workload does, then choose the right level of low-code.</p>
+        <div class="pills"><span class="pill">Azure Integration Services</span><span class="pill">Logic Apps Standard</span><span class="pill">Power Platform</span><span class="pill">Discovery-Led Migration</span></div>
+        <p class="small muted">Prepared for architecture and integration teams. Research snapshot: <time datetime="2026-10-16">October 16, 2026</time>. Recommendations are assessment hypotheses, not a finalized design or a price quote.</p>
+        <div class="stats">
+          <div class="stat"><strong>3</strong><span>Separate decisions: gateway, runtime, authoring</span></div>
+          <div class="stat"><strong>Low-code</strong><span>Where it fits, with explicit code boundaries</span></div>
+          <div class="stat"><strong>Pilot first</strong><span>Prove contracts, behavior, and operability</span></div>
+          <div class="stat"><strong>Coexist</strong><span>Move in controlled, reversible waves</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="wrap">
+        <div class="eyebrow">01 / Separate the Migration Decisions</div>
+        <h2>Move the gateway, the integrations, and the backend APIs deliberately.</h2>
+        <p class="section-intro">A MuleSoft migration can include API gateway policies, integrations implemented in Mule, and backend applications hosted elsewhere. Inventory these separately. An existing backend may only need new gateway routing; Mule-hosted business logic needs a new implementation or runtime. Select networking, regions, availability, and observability against your own requirements.</p>
+        <div class="grid3">
+          <article class="card"><span class="number">GATEWAY</span><h3>Protect and expose APIs</h3><p><strong>Azure API Management</strong> handles gateway policies, access controls, quotas, API products, and developer access. It does not execute Mule applications or replace a general-purpose integration runtime. <a class="ref" href="#s1">[1]</a></p></article>
+          <article class="card"><span class="number">RUNTIME</span><h3>Execute the integrations</h3><p><strong>Logic Apps</strong> handles visual orchestration. Functions or containerized services handle code-heavy work. Service Bus and Event Grid handle different messaging patterns. There is no single product that is all of Anypoint. <a class="ref" href="#s2">[2]</a></p></article>
+          <article class="card"><span class="number">AUTHORING</span><h3>Define what low-code means</h3><p>Visual API-backed workflows, employee approvals, visual data mapping, and business applications are different needs. <strong>Logic Apps, Power Automate, and Power Apps are complementary, not interchangeable.</strong> <a class="ref" href="#s3">[3]</a></p></article>
+        </div>
+        <div class="callout"><p><strong>Migration principle:</strong> Keep gateway migration, integration-runtime migration, and backend API modernization as linked but distinct workstreams. Inventory dependencies and prove representative workloads before estimating the full estate.</p></div>
+      </div>
+    </section>
+
+    <section class="section alt" id="mapping">
+      <div class="wrap">
+        <div class="eyebrow">02 / Capability-by-Capability Mapping</div>
+        <h2>What maps to what?</h2>
+        <p class="section-intro">These are functional destinations, not feature-parity claims or automatic conversion paths. A Mule application can map to several Azure services. Filter by workload family or search for a specific artifact such as DataWeave, RAML, or connectors.</p>
+        <div class="toolbar no-print">
+          <div class="field grow"><label for="map-search">Search capabilities</label><input id="map-search" type="search" name="capability" autocomplete="off" placeholder="e.g. DataWeave, batch, API policies" aria-controls="mapping-body"></div>
+          <div class="field"><label for="map-family">Workload family</label><select id="map-family" name="family"><option value="all">All capabilities</option><option value="gateway">API &amp; governance</option><option value="integration">Integration runtime</option><option value="messaging">Messaging &amp; events</option><option value="business">Business low-code</option><option value="operations">Operations &amp; delivery</option></select></div>
+          <button type="button" id="reset-map">Reset filters</button>
+        </div>
+        <p class="small muted no-print" id="map-count" role="status" aria-live="polite"></p>
+        <div class="tablewrap" tabindex="0" role="region" aria-label="Scrollable capability mapping table">
+          <table id="mapping-table">
+            <caption>MuleSoft capabilities and likely Microsoft destinations</caption>
+            <thead><tr><th scope="col">MuleSoft capability</th><th scope="col">Microsoft destination</th><th scope="col">Authoring model</th><th scope="col">What changes / what to validate</th></tr></thead>
+            <tbody id="mapping-body">
+              <tr data-family="gateway"><th scope="row">API Manager / Mule Gateway / Flex Gateway</th><td><strong>Azure API Management</strong></td><td>Configuration + policies</td><td>Recreate API contracts, routing, identity, mTLS, limits, and policies. Mule policies and client credentials are not directly portable. Policy expressions are not a replacement for application logic. <a class="ref" href="#s1">[1]</a></td></tr>
+              <tr data-family="gateway"><th scope="row">API-led experience, process, and system APIs</th><td>APIM + Logic Apps / existing APIs / Functions</td><td>Mixed</td><td>Retain useful API boundaries; do not create three mandatory network hops for every integration. Choose orchestration separately from API exposure. <a class="ref" href="#s2">[2]</a></td></tr>
+              <tr data-family="gateway"><th scope="row">Anypoint Exchange / API discovery</th><td><strong>Azure API Center</strong> + APIM developer portal + source/artifact repositories</td><td>Catalog + configuration</td><td>API Center inventories APIs across environments; the APIM portal serves API consumers. Neither is a full Exchange replacement for Mule connectors, templates, and reusable assets. <a class="ref" href="#s4">[4]</a></td></tr>
+              <tr data-family="gateway"><th scope="row">Design Center / RAML / OpenAPI</th><td>OpenAPI tooling + APIM import + API Center inventory</td><td>Contract-first tooling</td><td>Plan RAML-to-OpenAPI conversion as a separate task. Validate APIM's supported OpenAPI features, imports, and policy behavior; do not assume lossless format conversion. <a class="ref" href="#s5">[5]</a></td></tr>
+              <tr data-family="integration"><th scope="row">Anypoint Studio / Mule flows and subflows</th><td><strong>Logic Apps Standard</strong> workflows; reusable workflows or services</td><td>Visual low-code + expressions</td><td>Strong candidate for connector-based orchestration. Redesign scopes, variables, flow references, state, and execution semantics; Mule XML is not a Logic Apps workflow definition. <a class="ref" href="#s6">[6]</a></td></tr>
+              <tr data-family="integration"><th scope="row">Anypoint connectors / custom connectors</th><td>Logic Apps built-in / managed connectors; custom connectors or API-backed services</td><td>Low-code; code for gaps</td><td>Validate each operation, authentication mode, API version, throttling, payload size, and private connectivity. Similar connector names do not establish equivalence. <a class="ref" href="#s7">[7]</a></td></tr>
+              <tr data-family="integration"><th scope="row">DataWeave / Transform Message</th><td>Logic Apps Data Mapper, expressions, Liquid, XSLT; Functions for complex logic</td><td>Visual mapping + code</td><td>Data Mapper is for Standard projects in VS Code on Windows; it is not a bidirectional DataWeave editor. Test null vs absent fields, arrays, dates, precision, streaming, and error behavior. DataWeave is not a native Azure runtime language. <a class="ref" href="#s8">[8]</a> <a class="ref" href="#s33">[33]</a></td></tr>
+              <tr data-family="integration"><th scope="row">Schedulers / polling / file transfers</th><td>Logic Apps recurrence and connectors; Functions timers</td><td>Low-code or code</td><td>Reconfirm time zones, daylight-saving changes, overlapping runs, file locking, duplicates, large files, and missed-run recovery. Polling cadence affects cost and latency. <a class="ref" href="#s6">[6]</a></td></tr>
+              <tr data-family="integration"><th scope="row">Error handlers / Until Successful / retry scopes</th><td>Logic Apps scopes, run-after conditions, retry policies; dead-letter/replay design</td><td>Low-code + explicit design</td><td>A retry can repeat a side effect. Preserve error contracts, correlation, compensation, and poison-message behavior. Build idempotency; do not imply exactly-once execution. <a class="ref" href="#s9">[9]</a></td></tr>
+              <tr data-family="integration"><th scope="row">Mule batch jobs / bulk data pipelines</th><td>Logic Apps for orchestration; Data Factory for bulk data movement; code workers for custom processing</td><td>Visual pipelines + code</td><td>Not a direct Mule batch-engine replacement. Reassess persistent job state, record checkpoints, partial failures, parallelism, source/sink limits, and restart semantics rather than replacing a batch job with an unbounded loop. <a class="ref" href="#s10">[10]</a> <a class="ref" href="#s34">[34]</a></td></tr>
+              <tr data-family="integration"><th scope="row">Local / XA transactions / Object Store</th><td>Service-specific transactions, durable storage, idempotency records, compensation</td><td>Architecture + code/config</td><td>Do not assume Mule XA semantics transfer across Azure services. Service Bus transactions have a bounded scope and do not automatically enlist a database or workflow. Choose saga/compensation or a single transactional system where appropriate. <a class="ref" href="#s11">[11]</a> <a class="ref" href="#s35">[35]</a></td></tr>
+              <tr data-family="integration"><th scope="row">Java modules / custom business logic</th><td><strong>Azure Functions</strong>, App Service, or <strong>Container Apps</strong></td><td>Code-first</td><td>Keep complex logic in testable services. Containers do not automatically make Mule binaries portable or remove Mule licensing. Validate dependencies and hosting suitability. <a class="ref" href="#s12">[12]</a> <a class="ref" href="#s13">[13]</a></td></tr>
+              <tr data-family="integration"><th scope="row">Partner Manager / EDI / B2B</th><td>Logic Apps B2B capabilities + integration account where required</td><td>Low-code + schemas/maps</td><td>Check AS2, X12, EDIFACT, agreements, certificates, acknowledgments, and hosting-specific artifacts. An integration account is not an equivalent partner-onboarding/transaction-monitoring console. Budget for its operations experience as well as service costs. <a class="ref" href="#s14">[14]</a> <a class="ref" href="#s43">[43]</a></td></tr>
+              <tr data-family="messaging"><th scope="row">Anypoint MQ / JMS work queues</th><td><strong>Azure Service Bus</strong> queues, topics, subscriptions</td><td>Configuration + consumer logic</td><td>Durable commands and work distribution. Map ordering to sessions where needed; validate locks, retries, DLQ handling, delivery counts, TTL, and transaction scope. Not a drop-in JMS broker for every application. <a class="ref" href="#s15">[15]</a> <a class="ref" href="#s36">[36]</a></td></tr>
+              <tr data-family="messaging"><th scope="row">Event notifications / pub-sub routing</th><td><strong>Azure Event Grid</strong></td><td>Configuration + handlers</td><td>Use for event distribution. Validate ordering assumptions, duplicate delivery, retry policy, and dead-letter destination. Use Service Bus for enterprise commands rather than treating the products as interchangeable. <a class="ref" href="#s16">[16]</a></td></tr>
+              <tr data-family="messaging"><th scope="row">High-volume telemetry / event streams</th><td><strong>Azure Event Hubs</strong></td><td>Configuration + processing</td><td>Partitioned streaming and consumer offsets, not a workflow engine or a transactional command queue. Assess retention, replay, partitions, and consumer checkpointing. <a class="ref" href="#s17">[17]</a></td></tr>
+              <tr data-family="business"><th scope="row">MuleSoft Composer / employee-facing automations</th><td><strong>Power Automate</strong> cloud flows</td><td>Business low-code</td><td>Good fit for approvals and Microsoft 365/SaaS automation. Assess premium connectors, request limits, licensing, DLP, ownership, environment strategy, and ALM. Not the default runtime for all enterprise APIs. <a class="ref" href="#s3">[3]</a> <a class="ref" href="#s18">[18]</a> <a class="ref" href="#s37">[37]</a></td></tr>
+              <tr data-family="business"><th scope="row">MuleSoft RPA / desktop automation</th><td><strong>Power Automate</strong> desktop flows</td><td>RPA low-code</td><td>Automate legacy user interfaces only when API integration is unavailable. Assess attended/unattended licensing, machine management, credentials, and UI fragility. Process authoring, orchestration, and machine operations are all in scope, not just a recorder comparison. <a class="ref" href="#s19">[19]</a> <a class="ref" href="#s38">[38]</a></td></tr>
+              <tr data-family="business"><th scope="row">Business forms / integration front ends</th><td><strong>Power Apps</strong> + Dataverse / connectors + governed APIs</td><td>App low-code</td><td>Build employee experiences over APIs, not a replacement for Mule runtime. Validate app/user licensing, data access, delegated identity, and connector policies. <a class="ref" href="#s20">[20]</a></td></tr>
+              <tr data-family="operations"><th scope="row">Runtime Manager / CloudHub / Runtime Fabric</th><td>Azure resource management + Logic Apps / Functions / container hosting + deployment pipelines</td><td>IaC + operations</td><td>No single Runtime Manager equivalent. Separate control-plane governance, runtime scaling, network topology, application deployment, and platform operations. <a class="ref" href="#s6">[6]</a> <a class="ref" href="#s13">[13]</a></td></tr>
+              <tr data-family="operations"><th scope="row">Anypoint Monitoring / logs / dashboards</th><td>Azure Monitor, Application Insights, Log Analytics</td><td>Configuration + instrumentation</td><td>Rebuild cross-service correlation and business-level alerts. Secure run histories and telemetry; redact sensitive payloads. Regional logs alone do not create an end-to-end transaction trace. <a class="ref" href="#s21">[21]</a></td></tr>
+              <tr data-family="operations"><th scope="row">Secure properties / credentials / certificates</th><td>Managed identities, Microsoft Entra ID, Key Vault, connection configuration</td><td>Identity + configuration</td><td>Reissue or rotate secrets and certificates; validate connector identity support. APIM subscription keys identify subscriptions, not end users, and do not replace OAuth authorization. <a class="ref" href="#s1">[1]</a> <a class="ref" href="#s22">[22]</a></td></tr>
+              <tr data-family="operations"><th scope="row">MUnit / Maven deployment / shared libraries</th><td>Contract and integration tests + Azure DevOps / GitHub Actions + IaC; shared services/packages</td><td>Engineering / code</td><td>Rewrite tests around observable behavior; MUnit tests do not run against Logic Apps unchanged. Version contracts and maps, validate infrastructure, and promote immutable artifacts. <a class="ref" href="#s23">[23]</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p id="map-empty" class="callout" hidden>No capabilities match these filters. Try a broader search or reset the filters.</p>
+      </div>
+    </section>
+
+    <section class="section" id="low-code">
+      <div class="wrap">
+        <div class="eyebrow">03 / What Does Low-Code Actually Mean?</div>
+        <h2>Choose the builder experience by audience and workload.</h2>
+        <p class="section-intro">Low-code reduces the amount of hand-written orchestration. It does not remove the need for API design, testing, version control, identity, or production operations. Microsoft distinguishes Logic Apps from Power Automate by intended users and scenarios. <a class="ref" href="#s3">[3]</a></p>
+        <div class="grid3">
+          <article class="card"><span class="badge">Enterprise Integration</span><h3 style="margin-top:16px">Logic Apps Standard</h3><p><strong>Who:</strong> integration specialists and professional developers.</p><p><strong>Build:</strong> visual workflows, connector integrations, stateful processes, API-backed orchestration, B2B.</p><p><strong>Experience:</strong> Azure portal and Visual Studio Code; workflow artifacts in source control.</p><p><strong>Boundary:</strong> complex transformations, custom protocols, and specialized compute may still need code. Managed connector traffic does not automatically inherit a private network path.</p><a href="#services">Explore the runtime options</a></article>
+          <article class="card"><span class="badge">Business Automation</span><h3 style="margin-top:16px">Power Automate</h3><p><strong>Who:</strong> business technologists and automation teams, with IT governance.</p><p><strong>Build:</strong> approvals, employee workflows, Microsoft 365/SaaS automation, desktop RPA.</p><p><strong>Experience:</strong> browser-based cloud-flow designer; desktop-flow tooling for RPA.</p><p><strong>Boundary:</strong> licensing, platform request limits, DLP, owner/service-account lifecycle, environments, and solution-based ALM all matter.</p><a class="ref" href="#s18">Licensing and governance sources [18]</a></article>
+          <article class="card"><span class="badge">Business Applications</span><h3 style="margin-top:16px">Power Apps</h3><p><strong>Who:</strong> app makers and application teams.</p><p><strong>Build:</strong> forms, task screens, operational apps, Dataverse-backed experiences.</p><p><strong>Experience:</strong> canvas or model-driven app authoring; connectors to governed services.</p><p><strong>Boundary:</strong> this is the user experience layer, not the middleware engine. Put reusable integration logic behind appropriate services.</p><a class="ref" href="#s20">Power Apps overview [20]</a></article>
+        </div>
+        <div class="card" style="margin-top:24px">
+          <h3>Visual API development is not the same as API design.</h3>
+          <p>For an HTTP-triggered process, Logic Apps can visually implement the backend workflow and APIM can expose and govern it. For a contract-first API, teams still design and version the OpenAPI definition and validate the implementation against it. Power Apps builds the user interface; it does not generate the full enterprise integration platform. MuleSoft API-design artifacts need their own conversion and review path. <a class="ref" href="#s5">[5]</a> <a class="ref" href="#s39">[39]</a></p>
+          <p class="small muted" style="margin-bottom:0"><strong>Clarify the requirement:</strong> Is the desired experience a visual flow designer, a reusable connector catalog, a visual transformation mapper, a browser-based API contract editor, or all of these? Microsoft covers these through different tools rather than one Studio/Exchange-style surface.</p>
+        </div>
+        <div class="card" style="margin-top:24px">
+          <h3>Find a starting point</h3>
+          <p class="muted">A discussion aid, not an automated architecture assessment. Select the dominant need, then validate the recommendation against security, scale, latency, and operational requirements.</p>
+          <div class="toolbar">
+            <div class="field grow"><label for="pattern">Dominant workload pattern</label><select id="pattern" name="pattern">
+              <option value="orchestration">Connector-based system orchestration</option><option value="approval">Employee approvals / Microsoft 365 workflow</option><option value="app">Business application or form</option><option value="code">Complex code / low-latency business logic</option><option value="queue">Durable asynchronous work queue</option><option value="event">Event notifications to multiple handlers</option><option value="bulk">Bulk data movement / ETL</option><option value="gateway">Gateway-only API exposure</option>
+            </select></div>
+          </div>
+          <div class="callout" id="recommendation" role="status" aria-live="polite"></div>
+        </div>
+        <div class="callout warn"><p><strong>Important distinction:</strong> APIM can import and expose an API; it does not implement the backend business process. A Logic Apps HTTP-triggered workflow can implement an API-backed process, but contract design, authentication, synchronous timeout limits, schema validation, and testing still need explicit attention.</p></div>
+      </div>
+    </section>
+
+    <section class="section alt" id="services">
+      <div class="wrap">
+        <div class="eyebrow">04 / Service Deep Dives</div>
+        <h2>Understand each service's job and its limits.</h2>
+        <p class="section-intro">Select a service for practical fit, authoring experience, and migration implications. These services compose into a platform; they are not competing answers to the same question.</p>
+        <div class="controls no-print" role="group" aria-label="Select a service">
+          <button type="button" data-service="logic" aria-pressed="true" aria-controls="service-logic">Logic Apps</button><button type="button" data-service="apim" aria-pressed="false" aria-controls="service-apim">API Management</button><button type="button" data-service="power" aria-pressed="false" aria-controls="service-power">Power Platform</button><button type="button" data-service="code" aria-pressed="false" aria-controls="service-code">Functions &amp; Containers</button><button type="button" data-service="message" aria-pressed="false" aria-controls="service-message">Messaging</button><button type="button" data-service="catalog" aria-pressed="false" aria-controls="service-catalog">API Center</button>
+        </div>
+        <article class="deep-panel" id="service-logic" aria-labelledby="logic-heading">
+          <span class="badge">Primary Low-Code Runtime Candidate</span><h3 id="logic-heading" style="margin-top:16px">Azure Logic Apps</h3>
+          <div class="grid2"><div><h4>Why it maps to Mule flows</h4><ul><li>Visual triggers, actions, conditions, scopes, loops, and connectors.</li><li>Standard supports multiple workflows in one resource, with stateful or stateless execution choices.</li><li>Stateful workflows persist execution state; stateless workflows favor shorter in-memory execution. Select deliberately rather than using one model everywhere.</li><li>Data Mapper can reduce hand-written transformation work for supported schemas; complex mappings still need expressions or code.</li></ul></div><div><h4>Standard vs. Consumption</h4><ul><li><strong>Standard:</strong> single-tenant runtime, compute-based hosting, VNet integration/private endpoint options, local development, and project-based deployment. Managed connectors can add separate usage charges.</li><li><strong>Consumption:</strong> multitenant service, one workflow per resource, primarily execution-based billing; a strong option for suitable intermittent workloads.</li><li>Connector availability, limits, networking, artifacts, and cost differ. Standard is a candidate for this estate, not an automatic winner.</li></ul></div></div>
+          <h4>Data Mapper: a useful visual tool, not DataWeave parity</h4>
+          <p>The documented authoring experience is <strong>VS Code on Windows, for Standard projects</strong>, not the Azure portal or Consumption. The generated code pane is read-only; CSV schemas are not supported. Data Mapper maps use the <strong>Transform using Data Mapper XSLT</strong> action, which is not interchangeable with the separate Transform XML action. The documentation also lists string-filter comparison limitations. Inspect array-item mappings and test transformation results rather than assuming the visual map is complete. <a class="ref" href="#s8">[8]</a></p>
+          <div class="callout"><p><strong>Pilot proof:</strong> one synchronous connector flow, one asynchronous failure/replay flow, and one difficult DataWeave mapping. Measure behavior, throughput, latency, private connectivity, run-history sensitivity, deployment, and support effort. <a class="ref" href="#s6">[6]</a> <a class="ref" href="#s7">[7]</a> <a class="ref" href="#s8">[8]</a></p></div>
+        </article>
+        <article class="deep-panel" id="service-apim" aria-labelledby="apim-heading" hidden>
+          <span class="badge">Gateway, Not Integration Runtime</span><h3 id="apim-heading" style="margin-top:16px">Azure API Management</h3>
+          <div class="grid2"><div><h4>Define the gateway workstream</h4><ul><li>Publish APIs and products; apply authentication, token validation, quotas, rate limits, routing, and bounded transformations.</li><li>Govern APIs hosted on Azure, on-premises, or elsewhere, including Mule-hosted backends during coexistence.</li><li>Use revisions/versions and a controlled policy pipeline; migrate client access and identity explicitly.</li><li>Validate consumer contracts, backend TLS, mTLS termination points, forwarded identity, and firewall paths through the selected edge and network controls.</li></ul></div><div><h4>Do not transfer classic assumptions to v2</h4><ul><li>APIM Premium classic and Premium v2 are different platform choices, not identical deployment models.</li><li>Recheck current tier support for multi-region gateways, zones, networking, capacity, and migration paths before committing.</li><li>Gateway multi-region availability is not the same as a multi-region control plane, nor does it replicate backend state or workflow execution.</li><li>Configuration and regional policy behavior, subscription keys, propagation, and recovery must be tested; do not equate a global entry point with end-to-end DR.</li></ul></div></div>
+          <h4>Current documentation checkpoint: Premium classic vs. Premium v2</h4>
+          <div class="tablewrap" tabindex="0" role="region" aria-label="APIM Premium classic and Premium v2 comparison">
+            <table><caption>Snapshot for this discussion; recheck the current feature and reliability documentation before provisioning</caption><thead><tr><th scope="col">Requirement</th><th scope="col">Premium classic</th><th scope="col">Premium v2</th></tr></thead><tbody>
+              <tr><th scope="row">Native multi-region gateway deployment</th><td>Supported</td><td>Currently unavailable</td></tr>
+              <tr><th scope="row">Availability zones</th><td>Supported; configuration depends on region/deployment</td><td>Supported; configure zone redundancy at instance creation, not on an existing instance</td></tr>
+              <tr><th scope="row">VNet injection</th><td>Supported</td><td>Supported; validate the v2-specific network model</td></tr>
+              <tr><th scope="row">Backup/restore and self-hosted gateway</th><td>Supported</td><td>Currently unavailable</td></tr>
+              <tr><th scope="row">Automated classic-to-v2 migration</th><td colspan="2">No automated migration tooling is documented; v2 is available for newly created service instances.</td></tr>
+            </tbody></table>
+          </div>
+          <div class="callout warn"><p><strong>Architecture implication:</strong> A multi-region Premium classic design must not be relabeled Premium v2 without redesign. In classic multi-region deployments, only gateways replicate; the management plane and developer portal stay in the primary region. Secondary gateways serve last-synchronized configuration during a primary-region outage. Rate-limit and token-limit counters are per-region, not one globally aggregated counter. Verify policy-specific behavior and configuration propagation in tests. <a class="ref" href="#s24">[24]</a> <a class="ref" href="#s25">[25]</a> <a class="ref" href="#s28">[28]</a> <a class="ref" href="#s29">[29]</a></p></div>
+        </article>
+        <article class="deep-panel" id="service-power" aria-labelledby="power-heading" hidden>
+          <span class="badge">Governed Business Low-Code</span><h3 id="power-heading" style="margin-top:16px">Power Automate and Power Apps</h3>
+          <div class="grid2"><div><h4>Where they add value</h4><ul><li>Use Power Automate for employee-driven approvals, Microsoft 365 workflows, SaaS automation, and RPA.</li><li>Use Power Apps for user interfaces and operational applications that consume governed APIs.</li><li>Expose reusable enterprise capabilities through APIs rather than duplicating integration logic across many business flows.</li><li>A Composer migration may fit Power Automate conceptually, but connectors and flow behavior still require redesign.</li></ul></div><div><h4>Production governance is not optional</h4><ul><li>Set environment strategy, maker roles, connector data policies, and ownership/support arrangements.</li><li>Use solutions, connection references, environment variables, reviews, and deployment pipelines where supported.</li><li>Validate premium/custom connector licensing and service/request limits. An existing Microsoft 365 license is not blanket entitlement.</li><li>Check private access and gateway options per connector. Do not assume Azure VNet behavior applies to Power Platform.</li></ul></div></div>
+          <p style="margin-top:24px"><a class="ref" href="#s3">Comparison [3]</a> <a class="ref" href="#s18">Licensing [18]</a> <a class="ref" href="#s26">ALM [26]</a> <a class="ref" href="#s32">Connector data policies [32]</a></p>
+        </article>
+        <article class="deep-panel" id="service-code" aria-labelledby="code-heading" hidden>
+          <span class="badge">Keep Code Where Code Helps</span><h3 id="code-heading" style="margin-top:16px">Functions and Container Apps</h3>
+          <div class="grid2"><div><h4>Azure Functions</h4><ul><li>Event-driven functions for custom transformations, validation, and focused integration logic.</li><li>Durable Functions provides code-first orchestration patterns when developers need that model.</li><li>Choose hosting based on networking, scale, execution duration, language, startup behavior, and operational needs.</li><li>Keep business logic testable and independent of gateway policies.</li></ul></div><div><h4>Azure Container Apps</h4><ul><li>Host containerized APIs, workers, and jobs with managed application infrastructure.</li><li>Useful for existing libraries, custom runtimes, and complex integration components.</li><li>Requires container engineering, image security, dependency ownership, and workload-level resiliency design.</li><li>Not a license-free Mule runtime replacement and not a visual integration designer.</li></ul></div></div>
+          <p style="margin-top:24px"><a class="ref" href="#s12">Functions [12]</a> <a class="ref" href="#s13">Container Apps [13]</a></p>
+        </article>
+        <article class="deep-panel" id="service-message" aria-labelledby="message-heading" hidden>
+          <span class="badge">Separate Commands, Events, and Streams</span><h3 id="message-heading" style="margin-top:16px">Service Bus, Event Grid, and Event Hubs</h3>
+          <div class="grid3"><div><h4>Service Bus</h4><p>Durable enterprise commands, queues, and topic subscriptions. Use sessions for related ordered processing when required. Design lock renewal, dead-letter operations, duplicate handling, and replay.</p><a class="ref" href="#s15">[15]</a></div><div><h4>Event Grid</h4><p>Distribute notifications about things that happened. Handlers must accommodate delivery semantics; ordering and single delivery are not assumptions to build on.</p><a class="ref" href="#s16">[16]</a></div><div><h4>Event Hubs</h4><p>High-throughput event streaming with partitions and consumer offsets. Choose it for telemetry and streaming pipelines, not as a generic business work queue.</p><a class="ref" href="#s17">[17]</a></div></div>
+          <div class="callout"><p><strong>Shared rule:</strong> Persistence alone does not guarantee exactly-once business processing. Define idempotency keys, correlation IDs, retry budgets, dead-letter ownership, replay authorization, and retention.</p></div>
+        </article>
+        <article class="deep-panel" id="service-catalog" aria-labelledby="catalog-heading" hidden>
+          <span class="badge">Discovery Across the Estate</span><h3 id="catalog-heading" style="margin-top:16px">Azure API Center</h3>
+          <div class="grid2"><div><h4>What it contributes</h4><ul><li>An inventory for API discovery, metadata, definitions, versions, and governance across environments.</li><li>A way to catalog both migrated APIs and APIs still running on other platforms.</li><li>A complement to runtime gateway governance, not an additional gateway hop.</li></ul></div><div><h4>What it does not replace</h4><ul><li>APIM request execution, authentication enforcement, and runtime gateway policies.</li><li>The full Anypoint Exchange asset marketplace and all its reusable Mule artifacts.</li><li>Source control, package registries, schema repositories, and deployment pipelines.</li></ul></div></div>
+          <p style="margin-top:24px"><a class="ref" href="#s4">API Center overview [4]</a></p>
+        </article>
+        <noscript><p class="callout">JavaScript is disabled. The capability map and remaining guide are readable; enable JavaScript to switch service details and use filters.</p></noscript>
+      </div>
+    </section>
+
+    <section class="section" id="architecture">
+      <div class="wrap">
+        <div class="eyebrow">05 / Composed Reference Architecture</div>
+        <h2>One governed front door. Several execution patterns.</h2>
+        <p class="section-intro">An illustrative pattern, not a prescribed topology. The diagram separates the request path from asynchronous processing and cross-cutting controls. Each required region needs its own runtime and data-recovery design. Retain or replace existing edge services based on requirements, not the migration label.</p>
+        <figure class="arch" style="margin:0" aria-labelledby="arch-caption">
+          <div class="arch-node"><strong>Consumers, Applications, Partners</strong><span>External clients, internal systems, and governed business apps</span></div>
+          <div class="arch-arrow" aria-hidden="true">&#8595;</div>
+          <div class="arch-node"><strong>Optional WAF / Global Traffic Routing</strong><span>Existing edge services or an Azure edge design; validate mTLS, routing, and forwarded identity</span></div>
+          <div class="arch-arrow" aria-hidden="true">&#8595;</div>
+          <div class="arch-node gateway"><strong>Azure API Management</strong><span>Gateway policies, API access, contracts, quotas, routing, and telemetry</span></div>
+          <div class="arch-arrow" aria-hidden="true">&#8595;</div>
+          <div class="arch-row">
+            <div class="arch-node"><strong>Logic Apps Standard</strong><span>Visual orchestration, connectors, stateful workflows, B2B</span></div>
+            <div class="arch-node"><strong>App Service / Functions / Container Apps</strong><span>Backend APIs, custom code, complex mappings, specialized processing</span></div>
+            <div class="arch-node"><strong>Existing Services / Mule During Transition</strong><span>Stable backends, coexistence, incremental replacement</span></div>
+          </div>
+          <div class="arch-arrow" aria-hidden="true">&#8597;</div>
+          <div class="arch-row">
+            <div class="arch-node"><strong>Service Bus</strong><span>Durable commands and asynchronous work</span></div>
+            <div class="arch-node"><strong>Event Grid / Event Hubs</strong><span>Notifications / streams when required</span></div>
+            <div class="arch-node"><strong>Azure + On-Premises Systems</strong><span>Private routes or connector-specific gateways; validate each path</span></div>
+          </div>
+          <div class="arch-rail"><strong>Cross-cutting:</strong> Microsoft Entra ID &amp; managed identity / Key Vault / Azure Monitor &amp; Application Insights / API Center / source control, IaC &amp; deployment pipelines</div>
+          <figcaption id="arch-caption" class="small muted" style="margin-top:20px">HTTP requests traverse the gateway to the selected backend; asynchronous integrations may start directly from queues, events, schedules, or connectors without traversing APIM. Power Platform is a governed consumer/automation layer when appropriate, not an obligatory middleware hop.</figcaption>
+        </figure>
+        <div class="grid2" style="margin-top:24px">
+          <article class="card"><h3>Regional HA is not whole-platform DR</h3><p>Select regions and the APIM tier against business requirements. Specify RTO/RPO for workflows, messages, state stores, certificates, configuration, and backend systems separately. Prevent duplicate scheduled work and split-brain side effects.</p><p>APIM gateway failover does not recover in-flight Logic Apps executions or replicate application databases. Exercise failover and failback with realistic traffic. <a class="ref" href="#s25">[25]</a></p></article>
+          <article class="card"><h3>Private access is an end-to-end property</h3><p>Trace inbound and outbound traffic through edge controls, firewalls, APIM, each runtime, connector infrastructure, DNS, and on-premises backends. An APIM private path does not make every connector private.</p><p>Separate network reachability from authorization. Check managed identity support, certificate rotation, service identities, and sensitive payload retention. <a class="ref" href="#s7">[7]</a> <a class="ref" href="#s22">[22]</a> <a class="ref" href="#s41">[41]</a></p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section alt" id="backend-apis">
+      <div class="wrap">
+        <div class="eyebrow">06 / Backend API Migration</div>
+        <h2>Move the implementation, not just the API URL.</h2>
+        <p class="section-intro">First identify what MuleSoft owns: the API facade, business logic, orchestration, data access, or all four. Importing a definition into APIM does not move its implementation or data. Preserve a working consumer contract while you modernize the backend behind it. <a class="ref" href="#s44">[44]</a> <a class="ref" href="#s45">[45]</a></p>
+        <div class="grid3">
+          <article class="card"><span class="number">REPOINT</span><h3>Existing independent API</h3><p>If a working Java, .NET, Node.js, or other service sits behind Mule, keep it where appropriate and change the gateway route first. Hosting migration can happen separately.</p><p>Validate network reachability, upstream/downstream identity, headers, timeouts, and error handling. Do not rewrite a stable service merely because its gateway changes.</p></article>
+          <article class="card"><span class="number">REIMPLEMENT</span><h3>API implemented in Mule</h3><p>Extract the business behavior from Mule flows, DataWeave, connectors, policies, and shared modules. Rebuild that behavior in Logic Apps or code, then run consumer contract and regression tests.</p><p>The Migration Agent is an accelerator for supported artifacts, not a translator for every Java library, API specification, or runtime dependency.</p></article>
+          <article class="card"><span class="number">REFACTOR</span><h3>API plus long-running process</h3><p>Separate fast request validation from durable processing when the business process exceeds the synchronous latency budget.</p><p>Where consumers support it, use an accepted response, a job/status resource, and an asynchronous worker. An HTTP 202 design is a contract change, not a transparent gateway migration. <a class="ref" href="#s46">[46]</a></p></article>
+        </div>
+        <div class="tablewrap" tabindex="0" role="region" aria-label="Backend API hosting decisions" style="margin-top:24px">
+          <table><caption>Choose a backend hosting model from workload evidence</caption><thead><tr><th scope="col">Candidate</th><th scope="col">Good starting point</th><th scope="col">Validate before committing</th></tr></thead><tbody>
+            <tr><th scope="row">App Service</th><td>Conventional HTTP APIs and existing supported web frameworks; minimal application restructuring.</td><td>Runtime/framework support, plan capacity, networking, scale behavior, deployment slots where supported, and database dependencies. <a class="ref" href="#s47">[47]</a></td></tr>
+            <tr><th scope="row">Container Apps</th><td>Containerized APIs, workers, and jobs; teams that need custom dependencies without managing a Kubernetes cluster.</td><td>Startup/scale-to-zero tradeoffs, minimum replicas, ingress, probes, revisions, image security, and state outside containers. <a class="ref" href="#s13">[13]</a></td></tr>
+            <tr><th scope="row">Functions</th><td>Focused event-driven endpoints, transformations, queue consumers, and developer-owned orchestration.</td><td>Plan-specific execution and scale behavior, HTTP response limits, language/dependencies, networking, idempotency, and observability. <a class="ref" href="#s12">[12]</a></td></tr>
+            <tr><th scope="row">Logic Apps Standard</th><td>Connector-led API implementations and visual multi-step orchestration.</td><td>Stateful/stateless behavior, response deadlines, action overhead, connector limits, mapping complexity, and the intended developer experience. <a class="ref" href="#s6">[6]</a></td></tr>
+            <tr><th scope="row">AKS or existing infrastructure</th><td>A justified need for Kubernetes control, specialized platform dependencies, or an established supported hosting platform.</td><td>Platform ownership, operational overhead, security patching, resiliency, and why a simpler managed service does not meet requirements. <a class="ref" href="#s44">[44]</a></td></tr>
+          </tbody></table>
+        </div>
+        <div class="grid2" style="margin-top:24px">
+          <article class="card"><h3>Build an API migration contract pack</h3><ul><li>Inventory OpenAPI/RAML, routes, verbs, schemas, versions, errors, pagination, and payload limits.</li><li>Record each consumer, credential/token model, authorization rule, certificate, IP dependency, and deprecation obligation.</li><li>Capture golden requests/responses and negative cases, including headers, precision, dates, optional fields, and retry behavior.</li><li>Map database calls, stored procedures, file access, downstream APIs, libraries, and transactional boundaries.</li><li>Set explicit throughput, percentile-latency, availability, RTO/RPO, and ownership targets.</li></ul></article>
+          <article class="card"><h3>Make cutover reversible</h3><ul><li>Keep the external hostname/path stable where feasible; validate DNS, TLS, caching, and token audiences explicitly.</li><li>Version incompatible changes and give consumers a transition plan.</li><li>Use controlled route changes, health checks, and representative load tests; verify feature support for the selected hosting tier.</li><li>Drain in-flight work and coordinate message-consumer ownership. Never blindly shadow production writes.</li><li>Test data/schema backward compatibility and define a rollback trigger, decision owner, and rollback window.</li></ul></article>
+        </div>
+        <div class="callout warn"><p><strong>Data migration is its own workstream:</strong> A gateway rollback cannot undo writes made by a new backend. Plan database schema compatibility, state ownership, reconciliation, retention, and recovery separately from API routing. Move a service and its data together only when the dependency and downtime analysis justify it.</p></div>
+      </div>
+    </section>
+
+    <section class="section" id="migration">
+      <div class="wrap">
+        <div class="eyebrow">07 / Discovery, Acceleration, and Controlled Migration</div>
+        <h2>Use automation to accelerate. Use tests to accept.</h2>
+        <p class="section-intro">The useful first deliverable is an assessed workload inventory and a measured pilot, not a claim that every Mule flow converts to Logic Apps.</p>
+        <article class="card" id="migration-agent">
+          <span class="badge">Migration Accelerator / Validate Current Coverage</span>
+          <h3 style="margin-top:16px">Azure Logic Apps Migration Agent</h3>
+          <p>Microsoft documents a <strong>VS Code extension powered by GitHub Copilot and the VS Code Language Model API</strong>, with five stages: discovery, planning, conversion, validation, and deployment. The target is <strong>Logic Apps Standard, not Consumption</strong>. MuleSoft support is relevant to this assessment, but generated analysis, workflows, connections, configuration, and code still require engineering review and behavioral validation. <a class="ref" href="#s27">[27]</a></p>
+          <div class="grid2">
+            <div><h4>Evaluate with a representative project</h4><ul><li>Start from approved project files and environment requirements, not production credentials or unrestricted sensitive payloads.</li><li>Review the discovered inventory and migration plan before accepting conversion decisions.</li><li>Inspect generated workflows, mappings, connector bindings, code, deployment assets, and warnings.</li><li>Review the tool's prerequisites, model access, data handling, and current documentation before granting access to source.</li></ul></div>
+            <div><h4>Do not promise full automation</h4><ul><li>Mule version, parser coverage, connector coverage, and custom components affect feasibility.</li><li>DataWeave discovery does not prove semantic equivalence of the generated transformation.</li><li>API specifications and client migration remain a separate workstream where unsupported.</li><li>Validation must include contracts, failure behavior, security, performance, operations, and rollback, not only whether the generated project deploys.</li></ul></div>
+          </div>
+          <div class="callout warn" id="agent-coverage"><p><strong>Documented coverage at this snapshot:</strong> Version 1.12.1 includes Mule 4 project, flow, and DataWeave parsers; Mule 3 is supported with limitations and may require additional transformations. <strong>RAML and OpenAPI specification parsing is not implemented in that version.</strong> Treat contract conversion/import and client migration as separate workstreams. Parser support is not a guarantee of connector coverage or correct conversion of every expression. Recheck the installed release before the pilot. <a class="ref" href="#s27">[27]</a></p></div>
+          <h4>Tooling prerequisites and acceptance</h4>
+          <p>The quickstart lists an Azure subscription, a GitHub Copilot subscription, Azure CLI, VS Code 1.85.0 or later, Migration Agent and Logic Apps Standard extensions, Azure Functions tooling/Core Tools, and Docker Desktop. Requirements can change between releases; check the complete current quickstart before setup. Obtain approval for source-code/model access and data handling; this guide does not assert a tool-specific privacy or residency guarantee. <a class="ref" href="#s30">[30]</a></p>
+          <p>The documented validation stage exercises success and failure behavior and produces a <code>TEST-REPORT.md</code>. Review field-level outputs and the required test results before deployment. An agent-created report complements, rather than replaces, your engineering acceptance gates below. <a class="ref" href="#s31">[31]</a></p>
+        </article>
+        <ol class="flow">
+          <li class="card"><h3>Discover</h3><p>Export applications, APIs, flows, versions, connectors, DataWeave, policies, queues, schedules, test suites, deployment topology, and dependencies.</p><p><strong>Exit:</strong> an owner-approved inventory with sensitive-data classification and traffic baselines.</p></li>
+          <li class="card"><h3>Classify</h3><p>Place workloads into gateway-only, low-code integration, custom code, messaging, B2B/file, bulk-data, or retire/consolidate categories.</p><p><strong>Exit:</strong> target hypotheses, complexity bands, dependencies, and explicit unknowns.</p></li>
+          <li class="card"><h3>Pilot</h3><p>Use one simple flow and one difficult flow, including transformation and failure paths. Evaluate Migration Agent coverage on approved inputs.</p><p><strong>Exit:</strong> measured functional equivalence, operational readiness, and a revised estimate.</p></li>
+          <li class="card"><h3>Industrialize</h3><p>Build reusable identity, connectivity, connector, observability, testing, IaC, and deployment patterns. Define ownership and support runbooks.</p><p><strong>Exit:</strong> repeatable, reviewable deployments with rollback.</p></li>
+          <li class="card"><h3>Coexist and Cut Over</h3><p>Apply the incremental strangler pattern with APIM routing for API-by-API migration. Compare safe reads or sanitized replays; do not blindly mirror writes. Control queue consumer ownership. <a class="ref" href="#s40">[40]</a></p><p><strong>Exit:</strong> approved wave criteria, consumer readiness, and a rehearsed rollback window.</p></li>
+          <li class="card"><h3>Retire and Optimize</h3><p>Remove unused Mule workloads only after dependency verification, retention needs, business acceptance, and licensing/contract review.</p><p><strong>Exit:</strong> decommission evidence, stabilized operations, and measured cost baselines.</p></li>
+        </ol>
+        <h3 style="margin-top:32px">Pilot acceptance must prove behavior, not just deployment.</h3>
+        <div class="tablewrap" tabindex="0" role="region" aria-label="Pilot acceptance criteria">
+          <table><caption>Set numerical targets with business and engineering owners before the pilot</caption><thead><tr><th scope="col">Dimension</th><th scope="col">Proof to collect</th><th scope="col">Acceptance basis</th></tr></thead><tbody>
+            <tr><th scope="row">Contracts and mapping</th><td>Status codes, headers, errors, nulls, missing fields, dates, decimals, arrays, encoding, large payloads.</td><td>Approved golden datasets and consumer contract tests; document intentional differences.</td></tr>
+            <tr><th scope="row">Performance and scale</th><td>Throughput, p50/p95/p99 latency, cold and warm behavior, connector throttles, concurrent runs.</td><td>Agreed targets under realistic peak and sustained loads; no invented threshold.</td></tr>
+            <tr><th scope="row">Failure and recovery</th><td>Timeouts, transient/permanent failures, retries, duplicate delivery, DLQ, replay, regional loss.</td><td>Meet agreed RTO/RPO; demonstrate no unapproved repeated business effects and an operable replay process.</td></tr>
+            <tr><th scope="row">Security and compliance</th><td>Identity, mTLS, private routes, secret rotation, authorization, audit trails, payload redaction.</td><td>Security review, data-residency requirements, and retention policy.</td></tr>
+            <tr><th scope="row">Operations and delivery</th><td>End-to-end correlation, alert routing, support runbooks, repeatable CI/CD, rollback/failback.</td><td>Operations team can diagnose and recover a deliberately injected failure.</td></tr>
+            <tr><th scope="row">Economics</th><td>Measured actions, connector calls, compute, messaging, logs, network, environments, engineering effort.</td><td>Comparable workload-based estimate that includes migration and coexistence costs.</td></tr>
+          </tbody></table>
+        </div>
+      </div>
+    </section>
+
+    <section class="section alt" id="cost">
+      <div class="wrap">
+        <div class="eyebrow">08 / Cost, Licensing, and Total Ownership</div>
+        <h2>Price a workload and its operating model, not a service name.</h2>
+        <p class="section-intro">Compare equivalent throughput, latency, availability, environments, support, and retention. Capture current Mule costs, then model the Azure destination plus migration and coexistence. Prices depend on region, agreement, currency, tier, and usage; this guide does not embed a live price list or promise savings.</p>
+        <div class="tablewrap" tabindex="0" role="region" aria-label="Migration cost drivers">
+          <table><caption>Include these line items in a production estimate</caption><thead><tr><th scope="col">Cost area</th><th scope="col">Inputs to collect</th><th scope="col">Commonly missed costs</th></tr></thead><tbody>
+            <tr><th scope="row">API gateway</th><td>APIM tier, units, capacity tests, regions, zones, and workspace/self-hosted gateway requirements.</td><td>Nonproduction instances, duplicate capacity during cutover, and backend capacity. Published throughput examples are not sizing guarantees. <a class="ref" href="#s48">[48]</a></td></tr>
+            <tr><th scope="row">Logic Apps Consumption</th><td>Billable built-in operation executions, connector category, triggers/polling, loops, fan-out, retries, and retention.</td><td>Failed/skipped trigger executions and multiple workflow runs per array item. Managed connector metering differs from Standard. <a class="ref" href="#s49">[49]</a></td></tr>
+            <tr><th scope="row">Logic Apps Standard</th><td>Reserved compute/memory, replicas, environments, storage, and managed connector calls.</td><td>Idle reserved capacity, storage operations, and managed connector calls including pagination/chunking. Built-in operations are included in hosting; do not bill them again as Consumption actions. <a class="ref" href="#s49">[49]</a></td></tr>
+            <tr><th scope="row">Backend API hosting</th><td>App Service plan capacity, Functions plan usage/capacity, container vCPU/memory and replicas, image registry, and databases.</td><td>Minimum warm capacity, test/staging resources, load tests, storage, runtime dependencies, and database HA. <a class="ref" href="#s50">[50]</a></td></tr>
+            <tr><th scope="row">Messaging and B2B</th><td>Service Bus tier/capacity or operations, event traffic, stream retention, partner artifacts, and integration accounts.</td><td>Replay traffic, duplicate delivery, dead-letter operations, and protocol/partner management tooling.</td></tr>
+            <tr><th scope="row">Network and observability</th><td>Private endpoints, gateways/firewalls, DNS, data transfer, log ingestion, retention, application telemetry, and support.</td><td>Cross-region/egress charges, verbose payload logging, diagnostic duplication, and long retention. <a class="ref" href="#s50">[50]</a></td></tr>
+            <tr><th scope="row">Power Platform</th><td>App/user/process entitlements, premium/custom connectors, RPA capacity, Dataverse, and environments.</td><td>Assuming a Microsoft 365 license covers all automation scenarios; confirm current licensing for the chosen ownership and execution model. <a class="ref" href="#s18">[18]</a></td></tr>
+            <tr><th scope="row">Migration and ownership</th><td>Discovery, rebuild/conversion, tests, training, security reviews, support engineering, and dual-running duration.</td><td>Mule contract overlap/exit obligations, incident runbooks, credential rotation, decommission work, and long-term support ownership.</td></tr>
+          </tbody></table>
+        </div>
+        <div class="grid2" style="margin-top:24px">
+          <article class="card"><h3>Workload arithmetic before pricing</h3><p>An illustrative <strong>1,000,000 runs/month</strong> with <strong>8 billable non-connector operations/run</strong>, <strong>4 billable connector units/run</strong>, and <strong>5% execution overhead</strong> produces <strong>8,400,000 operation units</strong> and <strong>4,200,000 connector units</strong>.</p><p>This is an assumption, not a production baseline. For Standard built-in operations, enter a zero per-operation rate and include hosting in the baseline. Model each managed connector category separately when rates differ.</p><p>For Consumption, a connector unit here means a billable execution; for Standard it means a billable call. Use observed metering, not a presumed one-action/one-call relationship. <a class="ref" href="#s49">[49]</a></p></article>
+          <article class="card"><h3>Build comparable scenarios</h3><ul><li><strong>Baseline:</strong> current platform costs and business performance, including operations and license renewal dates.</li><li><strong>Target:</strong> matching production capacity, recovery requirements, dev/test, support, and retention.</li><li><strong>Transition:</strong> target run cost plus remaining Mule cost, temporary infrastructure, and migration labor.</li><li><strong>Sensitivity:</strong> low/expected/peak traffic, connector fan-out, retries, log growth, and longer coexistence.</li></ul><p>Use the <a href="https://azure.microsoft.com/en-us/pricing/calculator/">Azure Pricing Calculator</a> and negotiated rate sheets for a formal estimate. Record the region, currency, pricing date, discount assumptions, and exclusions.</p></article>
+        </div>
+        <article class="card" style="margin-top:24px">
+          <h3>Monthly planning worksheet</h3>
+          <p id="cost-help" class="muted">An editable USD arithmetic worksheet, not a quote. Volumes start with the illustrative workload above; pricing fields deliberately start blank. Enter current rates for your selected plan, or an explicit zero for a non-applicable charge. Inputs remain in this open page and are not stored, added to the URL, or transmitted.</p>
+          <form id="cost-form" novalidate aria-describedby="cost-help">
+            <div class="cost-grid">
+              <div class="field"><label for="cost-runs">Workflow/API runs per month</label><input id="cost-runs" name="runs" type="number" min="0" step="1" value="1000000" required autocomplete="off"></div>
+              <div class="field"><label for="cost-operations">Billable non-connector units per run</label><input id="cost-operations" name="operations" type="number" min="0" step="any" value="8" required autocomplete="off"></div>
+              <div class="field"><label for="cost-connectors">Billable connector units per run</label><input id="cost-connectors" name="connectors" type="number" min="0" step="any" value="4" required autocomplete="off"></div>
+              <div class="field"><label for="cost-overhead">Additional execution overhead (%)</label><input id="cost-overhead" name="overhead" type="number" min="0" step="any" value="5" required autocomplete="off"></div>
+              <div class="field"><label for="cost-baseline">Monthly platform baseline (USD)</label><input id="cost-baseline" name="baseline" type="number" min="0" step="any" required autocomplete="off" placeholder="APIM + runtime capacity across environments"></div>
+              <div class="field"><label for="cost-operation-rate">USD per 1,000 non-connector units</label><input id="cost-operation-rate" name="operationRate" type="number" min="0" step="any" required autocomplete="off" placeholder="Current rate, or 0 if included in hosting"></div>
+              <div class="field"><label for="cost-connector-rate">USD per 1,000 connector units</label><input id="cost-connector-rate" name="connectorRate" type="number" min="0" step="any" required autocomplete="off" placeholder="Rate for the modeled connector category"></div>
+              <div class="field"><label for="cost-log-gb">Billable telemetry GB per month</label><input id="cost-log-gb" name="logGb" type="number" min="0" step="any" value="20" required autocomplete="off"></div>
+              <div class="field"><label for="cost-log-rate">USD per billable telemetry GB</label><input id="cost-log-rate" name="logRate" type="number" min="0" step="any" required autocomplete="off" placeholder="Current ingestion rate, or explicit 0"></div>
+              <div class="field"><label for="cost-other">Other recurring monthly costs (USD)</label><input id="cost-other" name="other" type="number" min="0" step="any" required autocomplete="off" placeholder="Messaging, storage, network, licenses, support"></div>
+            </div>
+            <button type="submit" class="no-print">Calculate monthly planning total</button>
+            <p id="cost-error" class="error" role="alert" hidden style="margin-top:16px"></p>
+          </form>
+          <div id="cost-result" class="callout" role="status" aria-live="polite"><p>Enter all pricing inputs, then calculate. No estimate has been produced.</p></div>
+          <p class="small muted">Formula: baseline + (runs &times; units/run &times; overhead multiplier &times; rate/1,000) for each modeled operation category + telemetry GB &times; rate/GB + other recurring costs. The overhead multiplier applies uniformly only for this worksheet. Add category-specific retries, polling, free allowances, tiered pricing, retention, taxes, currency conversion, and other nonlinear meters in a formal estimate. One-time migration costs and remaining Mule charges are excluded unless you explicitly allocate them into the inputs.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="discovery">
+      <div class="wrap">
+        <div class="eyebrow">09 / Discovery and Migration Readiness</div>
+        <h2>Turn the inventory into an executable migration backlog.</h2>
+        <div class="grid2">
+          <article class="card"><h3>Discovery checklist</h3><p class="small muted">Use during assessment and planning. Checkmarks are temporary to this open page and are not saved or transmitted.</p>
+            <div class="checklist" id="discovery-checklist">
+              <label><input type="checkbox"> <span>Confirm Mule products, versions, hosting, support timelines, and the reason for migration.</span></label>
+              <label><input type="checkbox"> <span>Count applications, APIs, flows, environments, consumers, and critical dependencies.</span></label>
+              <label><input type="checkbox"> <span>Identify the top connectors, DataWeave mappings, custom Java, shared libraries, and batch jobs.</span></label>
+              <label><input type="checkbox"> <span>Define the low-code audience: integration developers, app makers, or business automation teams.</span></label>
+              <label><input type="checkbox"> <span>Set latency, throughput, payload, RTO/RPO, security, residency, and retention requirements.</span></label>
+              <label><input type="checkbox"> <span>Document edge/network topology, target regions, APIM tier choice, and logging strategy.</span></label>
+              <label><input type="checkbox"> <span>Separate Mule-implemented APIs from independent backends; inventory frameworks, data stores, consumers, and contracts.</span></label>
+              <label><input type="checkbox"> <span>Baseline costs and usage; model production, nonproduction, recovery, and coexistence scenarios.</span></label>
+              <label><input type="checkbox"> <span>Select a simple and a complex pilot; obtain sanitized inputs and golden test outputs.</span></label>
+              <label><input type="checkbox"> <span>Agree owners, acceptance gates, access approvals, migration waves, and rollback responsibilities.</span></label>
+            </div>
+            <p class="small" id="check-count" role="status" aria-live="polite" style="margin-top:16px"></p>
+          </article>
+          <article class="card"><h3>Minimum inventory record per workload</h3>
+            <ul><li>Business purpose, technical owner, support team, criticality, consumers, and data classification.</li><li>Source product/version/hosting, API definition, implementation repository, test assets, and deployment pipeline.</li><li>Connectors, transformations, queues, schedules, libraries, certificates, credentials, and upstream/downstream dependencies.</li><li>Normal/peak traffic, payload distribution, latency targets, failure/retry profile, and recovery requirements.</li><li>Proposed disposition: retain/repoint, reimplement, refactor, consolidate, or retire; target hosting and unresolved gaps.</li><li>Complexity, effort confidence, cost assumptions, dependency order, acceptance tests, cutover plan, and rollback owner.</li></ul>
+            <div class="callout"><p><strong>Definition of ready:</strong> The workload has an accountable owner, testable contract, known dependencies, target hypothesis, sanitized pilot inputs, and measurable acceptance gates. Resolve missing evidence before committing a migration date.</p></div>
+          </article>
+        </div>
+        <div class="callout warn"><p><strong>Production go/no-go:</strong> Require contract and negative-path tests, security approval, measured performance, monitored support ownership, recovery/replay evidence, a cutover checklist, rollback rehearsal, and business acceptance. Decommission only after the stabilization window and retention obligations are complete.</p></div>
+        <h3 style="margin-top:36px">Questions that often change the answer</h3>
+        <details><summary>Can APIM replace all of MuleSoft?</summary><p>No. APIM is a strong candidate for API gateway and management requirements. Flows, connectors, transformations, stateful orchestration, messaging, and batch work require other execution services. Preserve this distinction in scope, cost, staffing, and DR planning.</p></details>
+        <details><summary>Should every Mule flow become a Logic App?</summary><p>No. Logic Apps is a strong candidate for visual connector-based orchestration, but some flows should stay code-first, move to bulk-data tooling, become asynchronous, consolidate, or retire. Extremely chatty or latency-sensitive synchronous logic may fit a single coded service better.</p></details>
+        <details><summary>Is Data Mapper a drop-in DataWeave replacement?</summary><p>No. It is a visual transformation option with its own schemas, capabilities, and supported hosting experience. DataWeave modules, functions, type coercion, streaming, and edge cases require explicit analysis and golden-data tests; complex logic can move into a tested code component.</p></details>
+        <details><summary>Can the old and new platforms coexist?</summary><p>Yes, as an intentional migration pattern. A gateway can route to selected Mule backends while new implementations are validated. Coordinate identity, consumer contracts, telemetry, queue consumer ownership, and data consistency. Avoid double-processing writes during comparisons or rollback.</p></details>
+        <details><summary>Does active-active APIM make the integration platform active-active?</summary><p>No. Gateways, workflow execution, message stores, application data, private connectivity, and upstream dependencies have distinct availability and recovery models. Define state ownership, duplicate prevention, failover, and failback for the entire business transaction.</p></details>
+      </div>
+    </section>
+
+    <section class="section alt" id="sources">
+      <div class="wrap">
+        <div class="eyebrow">10 / Evidence and Further Reading</div>
+        <h2>Primary sources, not equivalence by marketing name.</h2>
+        <p class="section-intro">Microsoft documentation supports the product capabilities and limitations. The workload mappings and pilot recommendations are architectural synthesis; they are not Microsoft guarantees of conversion coverage, feature parity, licensing equivalence, or savings. Product status, regional availability, and prices can change.</p>
+        <ol class="source-list">
+          <li id="s1"><a href="https://learn.microsoft.com/en-us/azure/api-management/api-management-key-concepts">Azure API Management overview</a><span>Gateway, management plane, and developer portal responsibilities.</span></li>
+          <li id="s2"><a href="https://learn.microsoft.com/en-us/azure/architecture/integration/integration-get-started">Azure integration architecture design</a><span>Composing API management, workflows, events, and messaging.</span></li>
+          <li id="s3"><a href="https://learn.microsoft.com/en-us/azure/logic-apps/logic-apps-overview#comparison-with-power-automate">Logic Apps and Power Automate comparison</a><span>Different developer audiences and integration scenarios.</span></li>
+          <li id="s4"><a href="https://learn.microsoft.com/en-us/azure/api-center/overview">Azure API Center overview</a><span>API inventory, discovery, and governance; not a runtime gateway.</span></li>
+          <li id="s5"><a href="https://learn.microsoft.com/en-us/azure/api-management/api-management-api-import-restrictions">APIM API import restrictions</a><span>Supported definition formats and OpenAPI limitations.</span></li>
+          <li id="s6"><a href="https://learn.microsoft.com/en-us/azure/logic-apps/single-tenant-overview-compare">Logic Apps hosting comparison</a><span>Standard, Consumption, execution models, and hosting differences.</span></li>
+          <li id="s7"><a href="https://learn.microsoft.com/en-us/azure/connectors/introduction">Azure Logic Apps connectors</a><span>Built-in, managed, and custom connector models.</span></li>
+          <li id="s8"><a href="https://learn.microsoft.com/en-us/azure/logic-apps/create-maps-data-transformation-visual-studio-code">Logic Apps Data Mapper</a><span>Visual transformation authoring and prerequisites.</span></li>
+          <li id="s9"><a href="https://learn.microsoft.com/en-us/azure/logic-apps/error-exception-handling">Logic Apps error and exception handling</a><span>Retries, scopes, and run-after behavior.</span></li>
+          <li id="s10"><a href="https://learn.microsoft.com/en-us/azure/data-factory/introduction">Azure Data Factory overview</a><span>Data integration, data movement, and transformation pipelines.</span></li>
+          <li id="s11"><a href="https://learn.microsoft.com/en-us/azure/service-bus-messaging/service-bus-transactions">Service Bus transaction processing</a><span>Transaction scope and boundaries.</span></li>
+          <li id="s12"><a href="https://learn.microsoft.com/en-us/azure/azure-functions/functions-overview">Azure Functions overview</a><span>Event-driven code and execution patterns.</span></li>
+          <li id="s13"><a href="https://learn.microsoft.com/en-us/azure/container-apps/overview">Azure Container Apps overview</a><span>Managed containerized applications, workers, and jobs.</span></li>
+          <li id="s14"><a href="https://learn.microsoft.com/en-us/azure/logic-apps/logic-apps-enterprise-integration-overview">Logic Apps B2B enterprise integration</a><span>Integration accounts, schemas, agreements, and B2B artifacts.</span></li>
+          <li id="s15"><a href="https://learn.microsoft.com/en-us/azure/service-bus-messaging/service-bus-messaging-overview">Azure Service Bus overview</a><span>Queues, topics, sessions, and enterprise messaging features.</span></li>
+          <li id="s16"><a href="https://learn.microsoft.com/en-us/azure/event-grid/delivery-and-retry">Event Grid delivery and retry</a><span>Delivery semantics, retry behavior, and dead lettering.</span></li>
+          <li id="s17"><a href="https://learn.microsoft.com/en-us/azure/event-hubs/event-hubs-about">Azure Event Hubs overview</a><span>Partitioned streaming and consumer processing.</span></li>
+          <li id="s18"><a href="https://learn.microsoft.com/en-us/power-platform/admin/pricing-billing-skus">Power Apps and Power Automate licensing</a><span>Plan and entitlement considerations; validate connector licensing separately.</span></li>
+          <li id="s19"><a href="https://learn.microsoft.com/en-us/power-automate/desktop-flows/introduction">Power Automate desktop flows</a><span>Robotic process automation for desktop tasks.</span></li>
+          <li id="s20"><a href="https://learn.microsoft.com/en-us/power-apps/powerapps-overview">Power Apps overview</a><span>Low-code application development, not middleware execution.</span></li>
+          <li id="s21"><a href="https://learn.microsoft.com/en-us/azure/logic-apps/monitor-workflows-collect-diagnostic-data">Monitor Logic Apps workflows</a><span>Diagnostics and workflow observability.</span></li>
+          <li id="s22"><a href="https://learn.microsoft.com/en-us/azure/logic-apps/authenticate-with-managed-identity">Managed identity in Logic Apps</a><span>Supported identity patterns and connector-specific requirements.</span></li>
+          <li id="s23"><a href="https://learn.microsoft.com/en-us/azure/logic-apps/devops-deployment-single-tenant-azure-logic-apps">DevOps for Logic Apps Standard</a><span>Build, package, and deploy single-tenant applications.</span></li>
+          <li id="s24"><a href="https://learn.microsoft.com/en-us/azure/api-management/v2-service-tiers-overview">API Management v2 tiers</a><span>Current tier features, limitations, and availability.</span></li>
+          <li id="s25"><a href="https://learn.microsoft.com/en-us/azure/api-management/api-management-howto-deploy-multi-region">APIM multi-region deployment</a><span>Gateway topology, regional configuration, and operational caveats.</span></li>
+          <li id="s26"><a href="https://learn.microsoft.com/en-us/power-platform/alm/overview-alm">Power Platform application lifecycle management</a><span>Solutions, environments, source control, and delivery practices.</span></li>
+          <li id="s27"><a href="https://learn.microsoft.com/en-us/azure/logic-apps/migration/migration-agent-overview">Logic Apps Migration Agent</a><span>Standard target, Mule version and artifact parsing, version-specific limitations, and human validation.</span></li>
+          <li id="s28"><a href="https://learn.microsoft.com/en-us/azure/api-management/api-management-features">APIM feature comparison by tier</a><span>Multi-region, zones, gateways, networking, and tier-specific features.</span></li>
+          <li id="s29"><a href="https://learn.microsoft.com/en-us/azure/reliability/reliability-api-management">Reliability in API Management</a><span>Zone and regional failure resilience; validate current Premium v2 limitations.</span></li>
+          <li id="s30"><a href="https://learn.microsoft.com/en-us/azure/logic-apps/migration/migration-agent-quickstart">Migration Agent quickstart</a><span>Toolchain, subscriptions, extensions, and setup requirements.</span></li>
+          <li id="s31"><a href="https://learn.microsoft.com/en-us/azure/logic-apps/migration/migration-agent-validation-stage">Migration Agent validation stage</a><span>Test workflow, field-level output validation, and report/acceptance requirements.</span></li>
+          <li id="s32"><a href="https://learn.microsoft.com/en-us/power-platform/admin/wp-data-loss-prevention">Power Platform data policies</a><span>Connector classification and data-loss-prevention governance.</span></li>
+          <li id="s33"><a href="https://docs.mulesoft.com/mule-runtime/latest/transform-component-about">MuleSoft Transform Message</a><span>Source-platform visual mapping and DataWeave authoring experience.</span></li>
+          <li id="s34"><a href="https://docs.mulesoft.com/mule-runtime/latest/batch-processing-concept">MuleSoft batch processing</a><span>Batch-engine behavior that must be assessed rather than assumed portable.</span></li>
+          <li id="s35"><a href="https://docs.mulesoft.com/mule-runtime/4.13/transaction-management">MuleSoft transaction management</a><span>Source-platform local and distributed transaction semantics.</span></li>
+          <li id="s36"><a href="https://docs.mulesoft.com/mq/">Anypoint MQ documentation</a><span>Source-platform queues and messaging behaviors to inventory.</span></li>
+          <li id="s37"><a href="https://docs.mulesoft.com/composer-salesforce/ms_composer_overview">MuleSoft Composer overview</a><span>Business-user integration automation scope.</span></li>
+          <li id="s38"><a href="https://docs.mulesoft.com/rpa-builder/latest/">MuleSoft RPA Builder</a><span>Source-platform desktop automation authoring; assess orchestration and operations separately.</span></li>
+          <li id="s39"><a href="https://docs.mulesoft.com/design-center/design-create-publish-api-specs">MuleSoft API specification design</a><span>Contract artifacts and API-design workflow, separate from runtime conversion.</span></li>
+          <li id="s40"><a href="https://learn.microsoft.com/en-us/azure/architecture/patterns/strangler-fig">Strangler Fig pattern</a><span>Generic incremental replacement guidance, not a MuleSoft-specific migration guarantee.</span></li>
+          <li id="s41"><a href="https://learn.microsoft.com/en-us/azure/logic-apps/connect-on-premises-data-sources">Logic Apps on-premises connectivity</a><span>Connector-specific gateway requirements and Standard built-in connector options.</span></li>
+          <li id="s42"><a href="https://learn.microsoft.com/en-us/azure/architecture/reference-architectures/enterprise-integration/basic-enterprise-integration">Basic enterprise integration on Azure</a><span>Reference architecture combining API Management and Logic Apps.</span></li>
+          <li id="s43"><a href="https://docs.mulesoft.com/partner-manager/latest/">Anypoint Partner Manager</a><span>Partner onboarding and B2B transaction-management scope.</span></li>
+          <li id="s44"><a href="https://learn.microsoft.com/en-us/azure/architecture/guide/technology-choices/compute-decision-tree">Choose an Azure compute service</a><span>Hosting decisions for existing and new application implementations.</span></li>
+          <li id="s45"><a href="https://learn.microsoft.com/en-us/azure/architecture/best-practices/api-design">Web API design best practices</a><span>Contracts, resource design, loose coupling, and consumer compatibility.</span></li>
+          <li id="s46"><a href="https://learn.microsoft.com/en-us/azure/architecture/patterns/asynchronous-request-reply">Asynchronous request-reply pattern</a><span>Separating long-running processing from synchronous API responses.</span></li>
+          <li id="s47"><a href="https://learn.microsoft.com/en-us/azure/app-service/overview">Azure App Service overview</a><span>Managed hosting for web applications and RESTful APIs.</span></li>
+          <li id="s48"><a href="https://azure.microsoft.com/en-us/pricing/details/api-management/">API Management pricing</a><span>Tier/capacity pricing and the warning not to use published throughput examples for budget planning.</span></li>
+          <li id="s49"><a href="https://learn.microsoft.com/en-us/azure/logic-apps/logic-apps-pricing">Logic Apps metering and billing</a><span>Consumption executions versus Standard calls, included built-in operations, compute, and storage charges.</span></li>
+          <li id="s50"><a href="https://azure.microsoft.com/en-us/pricing/calculator/">Azure Pricing Calculator</a><span>Build a region-, currency-, and workload-specific platform estimate with current rates.</span></li>
+        </ol>
+        <div class="callout"><p><strong>About this guide:</strong> A general-purpose migration reference with illustrative architectures and workloads, not a record of any organization's environment. Product facts are sourced above; recommendations are architectural synthesis. The <a href="https://github.com/msft-contoso-university/azure-app-hosting-options">Azure hosting guide</a> inspired the layout. This is an independently authored community resource, not an official product support statement or pricing commitment.</p></div>
+      </div>
+    </section>
+  </main>
+  <footer><div class="wrap footer-row"><span>MuleSoft to Microsoft / Community Migration Guide</span><span>No telemetry, external scripts, or online dependencies to read this file. Source links require internet access.</span><a href="https://github.com/msft-contoso-university/mulesoft-to-azure-guide">View on GitHub</a><a href="#overview">Back to top</a></div></footer>
+  <script>
+    (() => {
+      const params = new URLSearchParams(location.search);
+      const updateUrl = (key, value, defaultValue = "") => {
+        const url = new URL(location.href);
+        if (value && value !== defaultValue) url.searchParams.set(key, value);
+        else url.searchParams.delete(key);
+        history.replaceState(null, "", url);
+      };
+      const themeButton = document.getElementById("theme-toggle");
+      const updateThemeButton = () => {
+        const dark = document.documentElement.dataset.theme === "dark";
+        themeButton.textContent = dark ? "Light mode" : "Dark mode";
+        themeButton.setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
+      };
+      themeButton.addEventListener("click", () => {
+        const theme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+        document.documentElement.dataset.theme = theme;
+        updateUrl("scoutTheme", theme);
+        updateThemeButton();
+      });
+      updateThemeButton();
+      document.getElementById("print-guide").addEventListener("click", () => window.print());
+
+      const search = document.getElementById("map-search");
+      const family = document.getElementById("map-family");
+      const rows = [...document.querySelectorAll("#mapping-body tr")];
+      search.value = params.get("q") || "";
+      const requestedFamily = params.get("family");
+      if ([...family.options].some(option => option.value === requestedFamily)) family.value = requestedFamily;
+      const filterRows = () => {
+        const query = search.value.trim().toLocaleLowerCase();
+        let visible = 0;
+        rows.forEach(row => {
+          const matches = (family.value === "all" || row.dataset.family === family.value) && row.textContent.toLocaleLowerCase().includes(query);
+          row.hidden = !matches;
+          if (matches) visible++;
+        });
+        document.getElementById("map-count").textContent = `${visible} of ${rows.length} capabilities shown`;
+        document.getElementById("map-empty").hidden = visible !== 0;
+        updateUrl("q", search.value.trim());
+        updateUrl("family", family.value, "all");
+      };
+      search.addEventListener("input", filterRows);
+      family.addEventListener("change", filterRows);
+      document.getElementById("reset-map").addEventListener("click", () => {
+        search.value = "";
+        family.value = "all";
+        filterRows();
+      });
+      filterRows();
+
+      const serviceButtons = [...document.querySelectorAll("[data-service]")];
+      const showService = (name) => {
+        serviceButtons.forEach(button => {
+          const active = button.dataset.service === name;
+          button.setAttribute("aria-pressed", String(active));
+          document.getElementById(button.getAttribute("aria-controls")).hidden = !active;
+        });
+        updateUrl("service", name, "logic");
+      };
+      serviceButtons.forEach(button => button.addEventListener("click", () => showService(button.dataset.service)));
+      const requestedService = params.get("service");
+      showService(serviceButtons.some(button => button.dataset.service === requestedService) ? requestedService : "logic");
+
+      const recommendations = {
+        orchestration: ["Start with Logic Apps Standard", "Validate connectors, transformation complexity, stateful/stateless execution, private connectivity, and cost. Compare Consumption when its hosting and economics fit."],
+        approval: ["Start with Power Automate", "Validate premium connector entitlement, DLP, ownership, environment strategy, request limits, and solution-based ALM. Keep reusable enterprise integration behind governed APIs."],
+        app: ["Start with Power Apps", "Use it for the application experience. Select a separate API/integration backend; validate Dataverse, licensing, identity, and connector policies."],
+        code: ["Start with Functions or a coded API/container service", "Choose hosting against latency, duration, runtime dependencies, networking, and scale. Expose HTTP APIs through APIM; add workflow orchestration only when it helps."],
+        queue: ["Start with Service Bus + a suitable consumer", "Choose Logic Apps or code for processing. Define ordering, idempotency, lock handling, retry budgets, dead-letter ownership, and replay."],
+        event: ["Start with Event Grid + event handlers", "Treat events as notifications. Validate duplicate delivery, ordering assumptions, retry/dead-letter behavior, and consumer independence."],
+        bulk: ["Evaluate Data Factory and data-platform tooling", "Use Logic Apps for surrounding orchestration where useful. Benchmark volume, record-level restart/failure handling, movement, and transformation needs."],
+        gateway: ["Start with Azure API Management", "Keep existing backends where appropriate. Migrate API definitions, policies, identity, consumers, observability, and network paths; do not invent a new runtime requirement."]
+      };
+      const pattern = document.getElementById("pattern");
+      if (Object.hasOwn(recommendations, params.get("pattern"))) pattern.value = params.get("pattern");
+      const updateRecommendation = () => {
+        const [title, description] = recommendations[pattern.value];
+        const strong = document.createElement("strong");
+        strong.textContent = title + ". ";
+        document.getElementById("recommendation").replaceChildren(strong, document.createTextNode(description));
+        updateUrl("pattern", pattern.value, "orchestration");
+      };
+      pattern.addEventListener("change", updateRecommendation);
+      updateRecommendation();
+      const costForm = document.getElementById("cost-form");
+      const costError = document.getElementById("cost-error");
+      const costResult = document.getElementById("cost-result");
+      const pendingCostMessage = "Enter all pricing inputs, then calculate. No estimate has been produced.";
+      costForm.addEventListener("input", () => {
+        costResult.textContent = "Inputs changed. Calculate again to update the planning total.";
+        costError.hidden = true;
+      });
+      costForm.addEventListener("submit", event => {
+        event.preventDefault();
+        const inputs = [...costForm.querySelectorAll("input")];
+        const invalid = inputs.find(input => input.value.trim() === "" || !input.validity.valid || !Number.isFinite(input.valueAsNumber));
+        if (invalid) {
+          costResult.textContent = pendingCostMessage;
+          costError.textContent = "Enter a valid non-negative number for every field. Runs must be a whole number; enter an explicit zero for charges that do not apply.";
+          costError.hidden = false;
+          invalid.focus();
+          return;
+        }
+        const values = Object.fromEntries(inputs.map(input => [input.name, input.valueAsNumber]));
+        const multiplier = 1 + values.overhead / 100;
+        const operationUnits = values.runs * values.operations * multiplier;
+        const connectorUnits = values.runs * values.connectors * multiplier;
+        const operationCost = operationUnits * values.operationRate / 1000;
+        const connectorCost = connectorUnits * values.connectorRate / 1000;
+        const telemetryCost = values.logGb * values.logRate;
+        const total = values.baseline + operationCost + connectorCost + telemetryCost + values.other;
+        if (![operationUnits, connectorUnits, operationCost, connectorCost, telemetryCost, total].every(Number.isFinite)) {
+          costResult.textContent = pendingCostMessage;
+          costError.textContent = "These inputs exceed the worksheet's numeric range. Reduce the quantities or model the workload in smaller categories.";
+          costError.hidden = false;
+          return;
+        }
+        costError.hidden = true;
+        const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+        const number = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
+        const totalLine = document.createElement("p");
+        const totalAmount = document.createElement("strong");
+        totalAmount.className = "cost-total";
+        totalAmount.textContent = money.format(total);
+        totalLine.append(totalAmount, document.createTextNode(" / month, modeled recurring costs"));
+        const breakdown = document.createElement("p");
+        breakdown.textContent = `Baseline ${money.format(values.baseline)} + operations ${money.format(operationCost)} + connectors ${money.format(connectorCost)} + telemetry ${money.format(telemetryCost)} + other ${money.format(values.other)}.`;
+        const units = document.createElement("p");
+        units.textContent = `Modeled units: ${number.format(operationUnits)} non-connector units and ${number.format(connectorUnits)} connector units. This is not a complete platform quote or a savings claim.`;
+        costResult.replaceChildren(totalLine, breakdown, units);
+      });
+      const checks = [...document.querySelectorAll("#discovery-checklist input")];
+      const updateChecks = () => {
+        document.getElementById("check-count").textContent = `${checks.filter(input => input.checked).length} of ${checks.length} discovery items discussed`;
+      };
+      checks.forEach(input => input.addEventListener("change", updateChecks));
+      updateChecks();
+      const printDetails = [...document.querySelectorAll("details")];
+      let originalDetails = [];
+      window.addEventListener("beforeprint", () => {
+        originalDetails = printDetails.map(detail => detail.open);
+        printDetails.forEach(detail => { detail.open = true; });
+      });
+      window.addEventListener("afterprint", () => {
+        printDetails.forEach((detail, index) => { detail.open = originalDetails[index]; });
+      });
+    })();
+  </script>
+</body>
+</html>
